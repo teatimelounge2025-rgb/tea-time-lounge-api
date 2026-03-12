@@ -1,6 +1,6 @@
 <?php
 
-namespace Teatimelounge\ApiGateway\Controllers;
+namespace TeaTimeLounge\ApiGateway\Controllers;
 
 class HealthController
 {

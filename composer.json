@@ -5,7 +5,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Teatimelounge\\ApiGateway\\": "src/"
+            "TeaTimeLounge\\ApiGateway\\": "src/"
         }
     },
     "authors": [
