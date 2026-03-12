@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace TeaTimelounge\ApiGateway\Controllers;
+namespace TeaTimeLounge\ApiGateway\Controllers;
 
 use Teatimelounge\ApiGateway\Http\Request;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace TeaTimelounge\ApiGateway\Controllers;
+namespace TeaTimeLounge\ApiGateway\Controllers;
 
 class MetaController
 {

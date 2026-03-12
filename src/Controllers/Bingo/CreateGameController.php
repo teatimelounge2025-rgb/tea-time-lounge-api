@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace TeaTimelounge\ApiGateway\Controllers\Bingo;
+namespace TeaTimeLounge\ApiGateway\Controllers\Bingo;
 
 final class CreateGameController
 {
