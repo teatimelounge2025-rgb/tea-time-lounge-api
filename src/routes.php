@@ -21,4 +21,6 @@ $router->post('/bingo/games', new CreateGameController());
 $router->get('/bingo/games/{id}', new GetGameController());
 $router->post('/bingo/games/{id}/call', new CallNumberController());
 $router->post('/bingo/games/{id}/claim', new ClaimController());
-$router->post('/leads/import', new LeadImportController());
+$router->post('/leads/import', function (array $params = []) {
+    return (new LeadImportController())(new \TeaTimeLounge\ApiGateway\Http\Request());
+});
