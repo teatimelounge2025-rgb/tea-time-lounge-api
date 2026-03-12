@@ -3,27 +3,21 @@ declare(strict_types=1);
 
 header('Content-Type: text/plain');
 
-echo "autoload file: ";
+$routerFile = __DIR__ . '/../src/Http/Router.php';
+$requestFile = __DIR__ . '/../src/Http/Request.php';
 $autoload = __DIR__ . '/../vendor/autoload.php';
+
+echo "autoload file: ";
 var_dump(file_exists($autoload));
 
-if (!file_exists($autoload)) {
-    exit;
-}
+echo "router file: ";
+var_dump(file_exists($routerFile));
 
-require $autoload;
+echo "request file: ";
+var_dump(file_exists($requestFile));
 
-echo "\nclass Router exists: ";
-var_dump(class_exists(\TeaTimeLounge\ApiGateway\Http\Router::class));
+echo "\nrouter file contents:\n";
+echo file_exists($routerFile) ? file_get_contents($routerFile) : "missing";
 
-echo "\nclass Request exists: ";
-var_dump(class_exists(\TeaTimeLounge\ApiGateway\Http\Request::class));
-
-echo "\ncomposer psr4 map:\n";
-$mapFile = __DIR__ . '/../vendor/composer/autoload_psr4.php';
-if (file_exists($mapFile)) {
-    $map = require $mapFile;
-    print_r($map);
-} else {
-    echo "autoload_psr4.php not found\n";
-}
+echo "\n\n====================\n\nrequest file contents:\n";
+echo file_exists($requestFile) ? file_get_contents($requestFile) : "missing";
