@@ -10,9 +10,22 @@ class LeadImportController
 {
     public function __invoke(Request $request): array
     {
-        $authHeader = isset($_SERVER['HTTP_AUTHORIZATION'])
-            ? trim((string) $_SERVER['HTTP_AUTHORIZATION'])
-            : '';
+        $authHeader = '';
+
+        if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $authHeader = trim((string) $_SERVER['HTTP_AUTHORIZATION']);
+        } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $authHeader = trim((string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+        } elseif (function_exists('getallheaders')) {
+            $headers = getallheaders();
+
+            foreach ($headers as $key => $value) {
+                if (strtolower((string) $key) === 'authorization') {
+                    $authHeader = trim((string) $value);
+                    break;
+                }
+            }
+        }
 
         $tokenFromEnv = trim((string) getenv('LEAD_IMPORT_TOKEN'));
         $expectedAuth = 'Bearer ' . $tokenFromEnv;
@@ -31,6 +44,9 @@ class LeadImportController
                     'env_token_length' => strlen($tokenFromEnv),
                     'received_header_length' => strlen($authHeader),
                     'env_token_loaded' => $tokenFromEnv !== '',
+                    'server_http_authorization' => $_SERVER['HTTP_AUTHORIZATION'] ?? null,
+                    'server_redirect_http_authorization' => $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null,
+                    'all_headers' => function_exists('getallheaders') ? getallheaders() : null,
                 ],
             ]);
         }
@@ -86,7 +102,7 @@ class LeadImportController
         }
 
         $supabaseUrl = rtrim((string) getenv('SUPABASE_URL'), '/');
-        $serviceRoleKey = (string) getenv('SUPABASE_SERVICE_ROLE_KEY');
+        $serviceRoleKey = trim((string) getenv('SUPABASE_SERVICE_ROLE_KEY'));
 
         if ($supabaseUrl === '' || $serviceRoleKey === '') {
             return $this->response(500, [
@@ -101,6 +117,7 @@ class LeadImportController
             'Content-Type: application/json',
         ];
 
+        // 1) Duplicate check by external_key
         $checkUrl = $supabaseUrl
             . '/rest/v1/leads?external_key=eq.'
             . rawurlencode($externalKey)
@@ -134,6 +151,7 @@ class LeadImportController
             ]);
         }
 
+        // 2) Insert new lead
         $payload = [
             'source' => $source,
             'source_sheet' => $sourceSheet,
@@ -263,6 +281,10 @@ class LeadImportController
         $responseBody = curl_exec($ch);
         $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
+
+        if (is_resource($ch) || $ch instanceof \CurlHandle) {
+            curl_close($ch);
+        }
 
         return [
             'ok' => $responseBody !== false,
