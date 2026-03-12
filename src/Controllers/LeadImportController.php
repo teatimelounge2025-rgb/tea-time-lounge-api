@@ -10,42 +10,38 @@ class LeadImportController
 {
     public function __invoke(Request $request): array
     {
-        $authHeader = '';
+        $receivedToken = '';
 
-        if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-            $authHeader = trim((string) $_SERVER['HTTP_AUTHORIZATION']);
-        } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
-            $authHeader = trim((string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+        if (isset($_SERVER['HTTP_X_LEAD_IMPORT_TOKEN'])) {
+            $receivedToken = trim((string) $_SERVER['HTTP_X_LEAD_IMPORT_TOKEN']);
         } elseif (function_exists('getallheaders')) {
             $headers = getallheaders();
 
             foreach ($headers as $key => $value) {
-                if (strtolower((string) $key) === 'authorization') {
-                    $authHeader = trim((string) $value);
+                if (strtolower((string) $key) === 'x-lead-import-token') {
+                    $receivedToken = trim((string) $value);
                     break;
                 }
             }
         }
 
-        $tokenFromEnv = trim((string) getenv('LEAD_IMPORT_TOKEN'));
-        $expectedAuth = 'Bearer ' . $tokenFromEnv;
+        $expectedToken = trim((string) getenv('LEAD_IMPORT_TOKEN'));
 
-        $isAuthorized = $authHeader !== ''
-            && $tokenFromEnv !== ''
-            && hash_equals($expectedAuth, $authHeader);
+        $isAuthorized = $receivedToken !== ''
+            && $expectedToken !== ''
+            && hash_equals($expectedToken, $receivedToken);
 
         if (!$isAuthorized) {
             return $this->response(401, [
                 'success' => false,
                 'error' => 'Unauthorized',
                 'debug' => [
-                    'received_auth_header' => $authHeader,
-                    'expected_auth_header' => $expectedAuth,
-                    'env_token_length' => strlen($tokenFromEnv),
-                    'received_header_length' => strlen($authHeader),
-                    'env_token_loaded' => $tokenFromEnv !== '',
-                    'server_http_authorization' => $_SERVER['HTTP_AUTHORIZATION'] ?? null,
-                    'server_redirect_http_authorization' => $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null,
+                    'received_token' => $receivedToken,
+                    'expected_token' => $expectedToken,
+                    'received_token_length' => strlen($receivedToken),
+                    'expected_token_length' => strlen($expectedToken),
+                    'env_token_loaded' => $expectedToken !== '',
+                    'server_http_x_lead_import_token' => $_SERVER['HTTP_X_LEAD_IMPORT_TOKEN'] ?? null,
                     'all_headers' => function_exists('getallheaders') ? getallheaders() : null,
                 ],
             ]);
@@ -117,7 +113,7 @@ class LeadImportController
             'Content-Type: application/json',
         ];
 
-        // 1) Duplicate check by external_key
+        // Duplicate check by external_key
         $checkUrl = $supabaseUrl
             . '/rest/v1/leads?external_key=eq.'
             . rawurlencode($externalKey)
@@ -151,7 +147,7 @@ class LeadImportController
             ]);
         }
 
-        // 2) Insert new lead
+        // Insert new lead
         $payload = [
             'source' => $source,
             'source_sheet' => $sourceSheet,
