@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace TeaTimeLounge\ApiGateway\Http;
+namespace TeaTimelounge\ApiGateway\Http;
 
 final class Request
 {

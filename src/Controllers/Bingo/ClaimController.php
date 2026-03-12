@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Teatimelounge\ApiGateway\Controllers\Bingo;
+namespace TeaTimelounge\ApiGateway\Controllers\Bingo;
 
 final class ClaimController
 {
