@@ -4,19 +4,34 @@ declare(strict_types=1);
 
 namespace TeaTimeLounge\ApiGateway\Controllers;
 
-use Teatimelounge\ApiGateway\Http\Request;
+use TeaTimeLounge\ApiGateway\Http\Request;
 
 class LeadImportController
 {
     public function __invoke(Request $request): array
     {
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-        $expectedAuth = 'Bearer ' . (string) getenv('LEAD_IMPORT_TOKEN');
+        $authHeader = isset($_SERVER['HTTP_AUTHORIZATION'])
+            ? trim((string) $_SERVER['HTTP_AUTHORIZATION'])
+            : '';
 
-        if ($authHeader !== $expectedAuth) {
+        $tokenFromEnv = trim((string) getenv('LEAD_IMPORT_TOKEN'));
+        $expectedAuth = 'Bearer ' . $tokenFromEnv;
+
+        $isAuthorized = $authHeader !== ''
+            && $tokenFromEnv !== ''
+            && hash_equals($expectedAuth, $authHeader);
+
+        if (!$isAuthorized) {
             return $this->response(401, [
                 'success' => false,
                 'error' => 'Unauthorized',
+                'debug' => [
+                    'received_auth_header' => $authHeader,
+                    'expected_auth_header' => $expectedAuth,
+                    'env_token_length' => strlen($tokenFromEnv),
+                    'received_header_length' => strlen($authHeader),
+                    'env_token_loaded' => $tokenFromEnv !== '',
+                ],
             ]);
         }
 
@@ -86,7 +101,6 @@ class LeadImportController
             'Content-Type: application/json',
         ];
 
-        // 1) Duplicate check by external_key
         $checkUrl = $supabaseUrl
             . '/rest/v1/leads?external_key=eq.'
             . rawurlencode($externalKey)
@@ -110,7 +124,7 @@ class LeadImportController
             ]);
         }
 
-        $existing = json_decode($checkResult['body'], true);
+        $existing = json_decode((string) $checkResult['body'], true);
 
         if (is_array($existing) && count($existing) > 0) {
             return $this->response(200, [
@@ -120,7 +134,6 @@ class LeadImportController
             ]);
         }
 
-        // 2) Insert new lead
         $payload = [
             'source' => $source,
             'source_sheet' => $sourceSheet,
@@ -168,7 +181,7 @@ class LeadImportController
             ]);
         }
 
-        $inserted = json_decode($insertResult['body'], true);
+        $inserted = json_decode((string) $insertResult['body'], true);
         $leadId = is_array($inserted) && isset($inserted[0]['id'])
             ? $inserted[0]['id']
             : null;
