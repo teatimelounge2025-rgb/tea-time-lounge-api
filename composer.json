@@ -1,18 +1,18 @@
 {
-    "name": "teatimelounge/api-gateway",
-    "description": "Lightweight PHP API gateway for Tea Time Lounge services (AI, Bingo, payments)",
-    "type": "project",
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "TeaTimeLounge\\ApiGateway\\": "src/"
-        }
-    },
-    "authors": [
-        {
-            "name": "Sander Huisman",
-            "email": "info@teatimelounge.com"
-        }
-    ],
-    "require": {}
+  "name": "teatime-lounge/api-gateway",
+  "description": "Lightweight PHP API gateway for Tea Time Lounge services (AI, Bingo, payments)",
+  "type": "project",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "TeaTimeLounge\\ApiGateway\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Sander Huisman",
+      "email": "info@teatimelounge.com"
+    }
+  ],
+  "require": {}
 }
