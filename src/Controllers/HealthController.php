@@ -1,25 +1,19 @@
 <?php
+declare(strict_types=1);
 
 namespace TeaTimeLounge\ApiGateway\Controllers;
 
-class HealthController
+use TeaTimeLounge\ApiGateway\Http\Request;
+
+final class HealthController
 {
-    public function __invoke(): array
+    public function index(Request $request): array
     {
         return [
-            'status' => 'ok',
-            'uptime' => $this->getUptime(),
-            'checks' => [
-                'php' => PHP_VERSION,
-                'memory_limit' => ini_get('memory_limit'),
-                'timezone' => date_default_timezone_get(),
+            'status' => 200,
+            'body' => [
+                'status' => 'ok',
             ],
         ];
-    }
-
-    private function getUptime(): string
-    {
-        // Simpel en platform-onafhankelijk (demo)
-        return gmdate('H:i:s', time() - $_SERVER['REQUEST_TIME']);
     }
 }
