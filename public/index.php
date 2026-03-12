@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use TeaTimelounge\ApiGateway\Http\Router;
+use TeaTimeLounge\ApiGateway\Http\Router;
 
 require __DIR__ . '/../vendor/autoload.php';
 
