@@ -13,9 +13,9 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 
 WORKDIR /var/www/html
 
-COPY composer.json composer.lock* ./
-RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
-
 COPY . /var/www/html
+
+RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction \
+ && composer dump-autoload --optimize
 
 EXPOSE 80
