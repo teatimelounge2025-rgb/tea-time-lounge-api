@@ -10,7 +10,9 @@ use TeaTimeLounge\ApiGateway\Controllers\Bingo\CallNumberController;
 use TeaTimeLounge\ApiGateway\Controllers\Bingo\ClaimController;
 
 /** @var \TeatimeLounge\ApiGateway\Http\Router $router */
-$router->get('/health', [HealthController::class, 'check']);
+$router->get('/health', function ($req) {
+    return (new HealthController())->index($req);
+});
 $router->get('/meta', new MetaController());
 
 
