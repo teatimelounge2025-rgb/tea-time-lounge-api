@@ -10,26 +10,29 @@ class LeadImportController
 {
     public function __invoke(Request $request): array
     {
-        $receivedToken = '';
+     $receivedToken = '';
 
-        if (isset($_SERVER['HTTP_X_LEAD_IMPORT_TOKEN'])) {
-            $receivedToken = trim((string) $_SERVER['HTTP_X_LEAD_IMPORT_TOKEN']);
-        } elseif (function_exists('getallheaders')) {
-            $headers = getallheaders();
+if (function_exists('getallheaders')) {
+    $headers = getallheaders();
 
-            foreach ($headers as $key => $value) {
-                if (strtolower((string) $key) === 'x-lead-import-token') {
-                    $receivedToken = trim((string) $value);
-                    break;
-                }
-            }
+    foreach ($headers as $key => $value) {
+        if (strtolower((string)$key) === 'x-lead-import-token') {
+            $receivedToken = trim((string)$value);
+            break;
         }
+    }
+}
 
-        $expectedToken = trim((string) getenv('LEAD_IMPORT_TOKEN'));
+if ($receivedToken === '' && isset($_SERVER['HTTP_X_LEAD_IMPORT_TOKEN'])) {
+    $receivedToken = trim((string)$_SERVER['HTTP_X_LEAD_IMPORT_TOKEN']);
+}
 
-        $isAuthorized = $receivedToken !== ''
-            && $expectedToken !== ''
-            && hash_equals($expectedToken, $receivedToken);
+$expectedToken = trim((string)getenv('LEAD_IMPORT_TOKEN'));
+
+$isAuthorized =
+    $receivedToken !== '' &&
+    $expectedToken !== '' &&
+    hash_equals($expectedToken, $receivedToken);
 
         if (!$isAuthorized) {
             return $this->response(401, [
