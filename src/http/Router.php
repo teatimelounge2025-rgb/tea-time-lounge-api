@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace TeaTimelounge\ApiGateway\Http;
+namespace TeaTimeLounge\ApiGateway\Http;
 
 final class Router
 {
