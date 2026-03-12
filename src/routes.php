@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-use Teatimelounge\ApiGateway\Controllers\LeadImportController;
-use Teatimelounge\ApiGateway\Controllers\MetaController;
-use Teatimelounge\ApiGateway\Controllers\HealthController;
-use Teatimelounge\ApiGateway\Controllers\Bingo\CreateGameController;
-use Teatimelounge\ApiGateway\Controllers\Bingo\GetGameController;
-use Teatimelounge\ApiGateway\Controllers\Bingo\CallNumberController;
-use Teatimelounge\ApiGateway\Controllers\Bingo\ClaimController;
+use TeaTimeLounge\ApiGateway\Controllers\LeadImportController;
+use TeaTimeLounge\ApiGateway\Controllers\MetaController;
+use TeaTimeLounge\ApiGateway\Controllers\HealthController;
+use TeaTimeLounge\ApiGateway\Controllers\Bingo\CreateGameController;
+use TeaTimeLounge\ApiGateway\Controllers\Bingo\GetGameController;
+use TeaTimeLounge\ApiGateway\Controllers\Bingo\CallNumberController;
+use TeaTimeLounge\ApiGateway\Controllers\Bingo\ClaimController;
 
 /** @var \Teatimelounge\ApiGateway\Http\Router $router */
 $router->get('/health', [HealthController::class, 'check']);
