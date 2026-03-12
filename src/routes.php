@@ -8,6 +8,7 @@ use TeaTimeLounge\ApiGateway\Controllers\Bingo\CreateGameController;
 use TeaTimeLounge\ApiGateway\Controllers\Bingo\GetGameController;
 use TeaTimeLounge\ApiGateway\Controllers\Bingo\CallNumberController;
 use TeaTimeLounge\ApiGateway\Controllers\Bingo\ClaimController;
+use TeaTimeLounge\ApiGateway\Http\Request;
 
 /** @var \TeatimeLounge\ApiGateway\Http\Router $router */
 $router->get('/health', function ($req) {
@@ -22,5 +23,5 @@ $router->get('/bingo/games/{id}', new GetGameController());
 $router->post('/bingo/games/{id}/call', new CallNumberController());
 $router->post('/bingo/games/{id}/claim', new ClaimController());
 $router->post('/leads/import', function (array $params = []) {
-    return (new LeadImportController())(new \TeaTimeLounge\ApiGateway\Http\Request());
+    return (new LeadImportController())(new Request());
 });
