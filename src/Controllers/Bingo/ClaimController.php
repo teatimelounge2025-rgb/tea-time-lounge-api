@@ -5,7 +5,7 @@ namespace TeaTimeLounge\ApiGateway\Controllers\Bingo;
 
 final class ClaimController
 {
-    public function __invoke(\Teatimelounge\ApiGateway\Http\Request $request, array $params): array
+    public function __invoke(\TeatimeLounge\ApiGateway\Http\Request $request, array $params): array
 {
     $body = $request->json();
 
