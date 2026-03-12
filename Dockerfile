@@ -1,5 +1,7 @@
 FROM php:8.3-apache
 
+RUN apt-get update && apt-get install -y git unzip
+
 RUN a2enmod rewrite
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
