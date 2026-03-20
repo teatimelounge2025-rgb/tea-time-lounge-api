@@ -649,6 +649,15 @@ IMPORTANT:
 Goal:
 Introduce a multilingual AI assistant that helps businesses respond to customer inquiries automatically, reply in customer language, and encourage either a quick reply or a visit to a live demo. Generate interest and encourage a reply or demo.
 
+IMPORTANT CONTEXT:
+The product is a website-based AI assistant that:
+- helps visitors on a website in real-time
+- answers questions instantly
+- works 24/7
+- can respond in the visitor’s own language automatically
+- reduces drop-off and improves engagement
+This is NOT an email automation tool. Do NOT position it as handling inboxes or emails.
+
 Lead context:
 - Company: {$company}
 - Industry: {$industry}
@@ -674,11 +683,21 @@ Core rules:
 
 Structure:
 1. Greeting (Dear Sir / Madam,
-2. Reason for reaching out
-3. Simple use case
-4. Demo mention (optional)
-5. Soft CTA
-6. closing (Best regards, Sander Huisman H: http://wwww.jibodev.eu T: +31 (0)6 52693240)
+2. Short introduction (who you are)
+3. Reason for reaching out
+4. What the assistant does (on their website)
+5. Key benefit (multilingual + instant help)
+6. Demo mention (optional)
+7. Call to action (demo or reply)
+8. closing (Best regards, Sander Huisman H: http://wwww.jibodev.eu T: +31 (0)6 52693240)
+
+PERSONALIZATION:
+Use the lead data when relevant:
+- Company name: ' . ($lead['company_name'] ?? '') . '
+- Website: ' . ($lead['website'] ?? '') . '
+- Business type: ' . ($lead['type'] ?? '') . '
+
+Adapt tone slightly depending on the type of business (e.g. hospitality, e-commerce, services), but keep it subtle.
 
 Demo link:
 - Mention naturally: https://teatimelounge.com/assistant
