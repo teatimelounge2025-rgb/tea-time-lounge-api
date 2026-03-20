@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace TeaTimeLounge\ApiGateway\Lib;
+namespace TeaTimeLounge\ApiGateway\lib;
 
 final class OpenAiClient
 {
