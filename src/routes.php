@@ -33,3 +33,8 @@ $router->post('/api/leads/{id}/generate-email', function (array $params = []) {
     $_GET['id'] = $params['id'] ?? null;
     return (new LeadImportController())->generateEmail(new Request());
 });
+
+$router->post('/api/leads/generate-follow-up', function () {
+    return (new LeadImportController())->generateFollowUp(new Request());
+});
+
