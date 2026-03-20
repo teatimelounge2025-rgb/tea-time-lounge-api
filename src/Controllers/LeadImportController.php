@@ -663,6 +663,7 @@ Lead context:
 - Industry: {$industry}
 - Location: {$cityCountry}
 - Website: {$website}
+- Name: {$name}
 - Notes: {$notes}
 
 Your task is to write short, natural outreach emails.
@@ -699,6 +700,13 @@ Use the lead data when relevant:
 - Business type: ' . ($lead['type'] ?? '') . '
 
 Adapt tone slightly depending on the type of business (e.g. hospitality, e-commerce, services), but keep it subtle.
+
+IMPORTANT GREETING RULES:
+- If a contact name is provided, start with: "Hi [Name],"
+- If no name is available, use a neutral greeting like: "Hi," or "Hello,"
+- Avoid overly formal greetings unless clearly appropriate
+- Do NOT use "Dear Sir / Madam" by default
+- Keep the tone polite, but natural and human
 
 IMPORTANT WRITING RULES:
 - Do NOT use "Dear Sir / Madam"
