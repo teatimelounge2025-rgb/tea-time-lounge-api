@@ -505,22 +505,8 @@ class LeadImportController
     }
 
     private function buildLeadEmailPrompt(array $lead): string
-    {
-        $company = $this->nullableString($lead['company'] ?? $lead['company_name'] ?? null) ?? '';
-        $website = $this->nullableString($lead['website'] ?? $lead['website_address'] ?? null) ?? '';
-        $domain = $this->nullableString($lead['domain'] ?? null) ?? '';
-        $industry = $this->nullableString($lead['industry'] ?? $lead['type_of_business'] ?? null) ?? '';
-        $managerName = $this->nullableString($lead['manager_name'] ?? $lead['contact_name'] ?? null) ?? '';
-        $cityCountry = $this->nullableString($lead['city_country'] ?? null)
-            ?? $this->combineLocation(
-                $this->nullableString($lead['city'] ?? null),
-                $this->nullableString($lead['country'] ?? null)
-            )
-            ?? '';
-        $notes = $this->nullableString($lead['notes_about_industry'] ?? $lead['notes'] ?? $lead['reason'] ?? null) ?? '';
-
-        return <<<PROMPT
-You are a lead outreach email assistant for Tea Time Lounge.
+{
+    return 'You are a lead outreach email assistant for Tea Time Lounge.
 
 Your task is to write short, natural, human-sounding first outreach emails based on lead data.
 
@@ -552,6 +538,7 @@ Tone:
 - Confident
 - Slightly informal but professional
 
+END OF PROMPT. DO NOT OUTPUT ANYTHING EXCEPT THE JSON OBJECT.
 
 Subject line:
 - Max 6–7 words
@@ -563,9 +550,8 @@ Output format (strict JSON):
   "subject": "string",
   "body": "string",
   "language": "string"
+}';
 }
-PROMPT;
-    }
 
     private function combineLocation(?string $city, ?string $country): ?string
     {
