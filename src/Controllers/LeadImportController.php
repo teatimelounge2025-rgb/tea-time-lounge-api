@@ -520,33 +520,54 @@ class LeadImportController
         $notes = $this->nullableString($lead['notes_about_industry'] ?? $lead['notes'] ?? $lead['reason'] ?? null) ?? '';
 
         return <<<PROMPT
-You are a lead follow-up email assistant for Tea Time Lounge / Minute Bar style outreach.
+You are a lead outreach email assistant for Tea Time Lounge.
 
-Write a warm, professional, concise, human-sounding first outreach email for a business lead.
+Your task is to write short, natural, human-sounding first outreach emails based on lead data.
 
-Lead data:
-- Company name: {$company}
-- Website: {$website}
-- Domain: {$domain}
-- Industry / business type: {$industry}
-- Contact / manager name: {$managerName}
-- Location: {$cityCountry}
-- Notes: {$notes}
+Goal:
+Introduce Tea Time Lounge in a simple, credible way and encourage a reply or short conversation.
 
-Instructions:
-- Personalize the email to the lead where reasonably possible.
-- Keep the email commercially smart, friendly, and natural.
-- Do not sound robotic or overly salesy.
-- Do not invent facts that are not reasonably supported by the lead data.
-- Keep the email body under 180 words.
-- Return only valid JSON.
-- Use this exact JSON structure:
+Core rules:
+- Keep emails between 60–120 words
+- Write like a real person, not marketing copy
+- Do NOT invent facts about the lead or their business
+- Do NOT over-describe services or operations
+- Avoid hype, buzzwords, or long explanations
+- Keep tone warm, professional, and light
+- Focus on curiosity, not selling
 
+Structure:
+1. Short greeting
+2. Why you are reaching out
+3. One simple reason there could be a fit
+4. Soft call to action
+
+Personalization:
+- Use company name, contact name, or location if available
+- If data is missing, stay neutral (no guessing)
+
+Tone:
+- Warm
+- Clear
+- Confident
+- Slightly informal but professional
+
+Avoid:
+- “I hope this email finds you well”
+- Long paragraphs
+- Generic phrases like “memorable experiences”
+- Overly detailed service descriptions
+
+Subject line:
+- Max 6–7 words
+- Simple and natural
+- No hype or forced questions
+
+Output format (strict JSON):
 {
   "subject": "string",
   "body": "string",
-  "language": "string",
-  "personalization_notes": ["string"]
+  "language": "string"
 }
 PROMPT;
     }
