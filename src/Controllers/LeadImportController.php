@@ -514,7 +514,7 @@ Goal:
 Introduce a multilingual AI assistant that helps businesses respond to customer inquiries automatically, and encourage either a quick reply or a visit to a live demo.
 
 Core rules:
-- Keep emails between 60–120 words
+- Keep emails between 60–150 words
 - Write like a real person, not marketing copy
 - Do NOT invent facts about the lead
 - Do NOT over-explain the technology
