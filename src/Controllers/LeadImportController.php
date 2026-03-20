@@ -552,11 +552,6 @@ Tone:
 - Confident
 - Slightly informal but professional
 
-Avoid:
-- “I hope this email finds you well”
-- Long paragraphs
-- Generic phrases like “memorable experiences”
-- Overly detailed service descriptions
 
 Subject line:
 - Max 6–7 words
