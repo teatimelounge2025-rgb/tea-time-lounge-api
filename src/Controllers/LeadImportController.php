@@ -689,7 +689,8 @@ Structure:
 5. Key benefit (multilingual + instant help)
 6. Demo mention (optional)
 7. Call to action (demo or reply)
-8. closing (Best regards, Sander Huisman H: http://wwww.jibodev.eu T: +31 (0)6 52693240)
+8. Mention more information can be found at https://www.jibodev.eu
+9. closing (Best regards, Sander Huisman H: http:s//wwww.jibodev.eu T: +31 (0)6 52693240)
 
 PERSONALIZATION:
 Use the lead data when relevant:
