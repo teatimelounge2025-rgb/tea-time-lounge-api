@@ -506,12 +506,22 @@ class LeadImportController
 
     private function buildLeadEmailPrompt(array $lead): string
 {
-    return 'You are a lead outreach email assistant for a multilingual AI assistant developed by Tea Time Lounge.
+    return 'You are a lead outreach email assistant for a multilingual AI assistant developed by Jibo Dev.
 
 Your task is to write short, natural, human-sounding outreach emails.
 
+What the product does (keep this subtle and simple):
+- Helps handle incoming customer questions automatically
+- Can reply in the customers language
+- Reduces time spent on repetitive messages
+- Keeps responses clear and consistent
+
+IMPORTANT:
+- Mention at most 1–2 of these naturally in the email
+- Do NOT list features
+- Do NOT sound technical
 Goal:
-Introduce a multilingual AI assistant that helps businesses respond to customer inquiries automatically, and encourage either a quick reply or a visit to a live demo. Generate interest and encourage a reply or demo.
+Introduce a multilingual AI assistant that helps businesses respond to customer inquiries automatically, reply in customer language, and encourage either a quick reply or a visit to a live demo. Generate interest and encourage a reply or demo.
 
 Lead context:
 - Company: {$company}
@@ -542,6 +552,7 @@ Structure:
 3. Simple use case
 4. Demo mention (optional)
 5. Soft CTA
+6. closing (Best regards, Sander Huisman http://wwww.jibodev.eu)
 
 Demo link:
 - Mention naturally: https://teatimelounge.com/assistant
