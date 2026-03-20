@@ -538,7 +538,7 @@ IMPORTANT:
 - If data is missing, stay generic
 
 Core rules:
-- Keep emails between 150-180 words
+- Keep emails between 150-190 words
 - Write like a real person, not marketing copy
 - Do NOT invent facts about the lead
 - Do NOT over-explain the technology
