@@ -511,10 +511,24 @@ class LeadImportController
 Your task is to write short, natural, human-sounding outreach emails.
 
 Goal:
-Introduce a multilingual AI assistant that helps businesses respond to customer inquiries automatically, and encourage either a quick reply or a visit to a live demo.
+Introduce a multilingual AI assistant that helps businesses respond to customer inquiries automatically, and encourage either a quick reply or a visit to a live demo. Generate interest and encourage a reply or demo.
+
+Lead context:
+- Company: {$company}
+- Industry: {$industry}
+- Location: {$cityCountry}
+- Website: {$website}
+- Notes: {$notes}
+
+Your task is to write short, natural outreach emails.
+
+IMPORTANT:
+- Use the lead context ONLY if it fits naturally
+- Do NOT guess or invent details
+- If data is missing, stay generic
 
 Core rules:
-- Keep emails between 60–150 words
+- Keep emails between 150-200 words
 - Write like a real person, not marketing copy
 - Do NOT invent facts about the lead
 - Do NOT over-explain the technology
@@ -523,11 +537,11 @@ Core rules:
 - Focus on usefulness, not selling
 
 Structure:
-1. Short greeting
-2. Why you are reaching out
-3. One simple benefit (saving time / multilingual replies / handling inquiries)
-4. Soft mention of the live demo link
-5. Optional invite for a short call
+1. Greeting
+2. Reason for reaching out
+3. Simple use case
+4. Demo mention (optional)
+5. Soft CTA
 
 Demo link:
 - Mention naturally: https://teatimelounge.com/assistant
@@ -544,8 +558,10 @@ Tone:
 - Slightly informal but professional
 
 Subject line:
-- Max 6–7 words
+- Max 10-12 words
 - Simple and natural
+- Can lightly reflect industry or use case
+
 
 Output format (strict JSON):
 {
