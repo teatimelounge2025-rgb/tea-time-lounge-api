@@ -42,6 +42,8 @@ if (file_exists(__DIR__ . '/../.env')) {
     }
 }
 
+
+
 $router = new Router();
 
 require __DIR__ . '/../src/routes.php';

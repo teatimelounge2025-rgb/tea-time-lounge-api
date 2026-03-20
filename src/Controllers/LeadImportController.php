@@ -456,6 +456,132 @@ class LeadImportController
         ];
     }
 
+    public function generateFollowUp(Request $request): array
+{
+    $body = $this->getJsonBody();
+    $leadId = $this->detectLeadId($body);
+
+    if ($leadId === null) {
+        return $this->response(400, [
+            'success' => false,
+            'error' => 'Lead id is required',
+        ]);
+    }
+
+    $stage = $this->nullableString($body['stage'] ?? null) ?? 'follow_1';
+
+    $supabaseUrl = rtrim((string) getenv('SUPABASE_URL'), '/');
+    $serviceRoleKey = trim((string) getenv('SUPABASE_SERVICE_ROLE_KEY'));
+
+    if ($supabaseUrl === '' || $serviceRoleKey === '') {
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'Supabase environment variables missing',
+        ]);
+    }
+
+    $supabaseHeaders = $this->getSupabaseHeaders($serviceRoleKey);
+
+    $leadResult = $this->fetchLeadById($supabaseUrl, $supabaseHeaders, $leadId);
+
+    if (($leadResult['success'] ?? false) === false) {
+        return $this->response((int) ($leadResult['status'] ?? 500), [
+            'success' => false,
+            'error' => $leadResult['error'] ?? 'Lead fetch failed',
+            'details' => $leadResult['details'] ?? null,
+        ]);
+    }
+
+    $lead = $leadResult['lead'];
+
+    $markGenerating = $this->updateLead($supabaseUrl, $supabaseHeaders, $leadId, [
+        'generation_status' => 'generating',
+        'updated_at' => gmdate('c'),
+    ]);
+
+    if (($markGenerating['success'] ?? false) === false) {
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'Could not mark lead as generating',
+            'details' => $markGenerating['details'] ?? null,
+        ]);
+    }
+
+    $prompt = $this->buildFollowUpPrompt($lead, $stage);
+
+    try {
+        $openAiClient = new OpenAiClient();
+        $draft = $openAiClient->generateLeadDraft($prompt);
+    } catch (\Throwable $e) {
+        $this->updateLead($supabaseUrl, $supabaseHeaders, $leadId, [
+            'generation_status' => 'failed',
+            'updated_at' => gmdate('c'),
+        ]);
+
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'OpenAI generation failed',
+            'details' => $e->getMessage(),
+        ]);
+    }
+
+    $stageToSave = match ($stage) {
+        'follow_1' => 'follow_1_sent',
+        'follow_2' => 'follow_2_sent',
+        default => 'follow_3_sent',
+    };
+
+    $finalPayload = [
+        'draft_subject' => trim((string) ($draft['subject'] ?? '')),
+        'draft_body' => trim((string) ($draft['body'] ?? '')),
+        'draft_language' => $this->nullableString($draft['language'] ?? null) ?? 'en',
+        'generation_status' => 'generated',
+        'generated_at' => gmdate('c'),
+        'prompt_version' => 'follow_up_v1',
+        'follow_up_stage' => $stageToSave,
+        'follow_up_sent_at' => gmdate('c'),
+        'personalization_notes' => is_array($draft['personalization_notes'] ?? null)
+            ? array_values(array_filter(
+                array_map(
+                    fn($item) => is_scalar($item) ? trim((string) $item) : '',
+                    $draft['personalization_notes']
+                ),
+                fn(string $item) => $item !== ''
+            ))
+            : [],
+        'updated_at' => gmdate('c'),
+    ];
+
+    $saveDraft = $this->updateLead(
+        $supabaseUrl,
+        $supabaseHeaders,
+        $leadId,
+        $finalPayload,
+        true
+    );
+
+    if (($saveDraft['success'] ?? false) === false) {
+        $this->updateLead($supabaseUrl, $supabaseHeaders, $leadId, [
+            'generation_status' => 'failed',
+            'updated_at' => gmdate('c'),
+        ]);
+
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'Could not save generated follow-up',
+            'details' => $saveDraft['details'] ?? null,
+        ]);
+    }
+
+    return $this->response(200, [
+        'success' => true,
+        'status' => 'generated',
+        'lead_id' => $leadId,
+        'follow_up_stage' => $stageToSave,
+        'draft' => $saveDraft['row'] ?? $finalPayload,
+    ]);
+}
+
     private function updateLead(
         string $supabaseUrl,
         array $headers,
@@ -580,6 +706,84 @@ Output format (strict JSON):
   "body": "string",
   "language": "string"
 }';
+}
+
+
+private function buildFollowUpPrompt(array $lead, string $stage): string
+{
+    $company = $this->nullableString($lead['company'] ?? null) ?? '';
+    $industry = $this->nullableString($lead['industry'] ?? null) ?? '';
+    $cityCountry = $this->nullableString($lead['city_country'] ?? null) ?? '';
+    $notes = $this->nullableString($lead['notes_about_industry'] ?? null) ?? '';
+    $status = $this->nullableString($lead['status'] ?? null) ?? '';
+
+    $stageInstruction = match ($stage) {
+        'follow_2' => 'This is the second follow-up. Be a bit more direct, but still warm and polite.',
+        'follow_3' => 'This is the final follow-up. Be respectful, brief, and give an easy way out.',
+        default => 'This is the first follow-up. Keep it light, friendly, and low-pressure.',
+    };
+
+    return "You are a lead outreach email assistant for a multilingual AI assistant developed by Jibo Dev.
+
+Your task is to write short, natural follow-up emails.
+
+What the product does (keep this subtle and simple):
+- Helps handle incoming customer questions automatically
+- Can reply in the customer's language
+- Reduces time spent on repetitive messages
+
+IMPORTANT:
+- Mention at most 1–2 of these naturally
+- Do NOT list features
+- Do NOT sound technical
+
+{$stageInstruction}
+
+Context:
+This is a follow-up to a previous outreach email.
+
+Lead context:
+- Company: {$company}
+- Industry: {$industry}
+- Location: {$cityCountry}
+- Notes: {$notes}
+- Current status: {$status}
+
+Rules:
+- Keep emails between 60-100 words
+- Sound human and natural
+- Do NOT repeat the full original pitch
+- Do NOT be pushy
+- Do NOT invent details
+
+Structure:
+1. Short friendly check-in
+2. Light reminder of value
+3. Optional demo mention
+4. Soft CTA
+
+Demo link:
+https://teatimelounge.com/assistant
+
+Call to action:
+- Keep it soft (e.g. 'just checking if this might be relevant', 'happy to show you')
+
+Tone:
+- Human
+- Calm
+- Helpful
+- Low-pressure
+
+Subject line:
+- Short and natural
+- Feels like a follow-up
+
+Output format (strict JSON):
+{
+  \"subject\": \"string\",
+  \"body\": \"string\",
+  \"language\": \"string\"
+}";
 }
 
     private function combineLocation(?string $city, ?string $country): ?string
