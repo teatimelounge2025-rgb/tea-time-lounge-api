@@ -690,7 +690,7 @@ Structure:
 6. Demo mention (optional)
 7. Call to action (demo or reply)
 8. Mention more information can be found at https://www.jibodev.eu
-9. closing (Best regards, Sander Huisman H: http:s//wwww.jibodev.eu T: +31 (0)6 52693240)
+9. closing (Best regards, Sander Huisman H: https://www.jibodev.eu T: +31 (0)6 52693240)
 
 PERSONALIZATION:
 Use the lead data when relevant:
