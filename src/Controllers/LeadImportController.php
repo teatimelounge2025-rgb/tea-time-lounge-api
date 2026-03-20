@@ -700,6 +700,13 @@ Use the lead data when relevant:
 
 Adapt tone slightly depending on the type of business (e.g. hospitality, e-commerce, services), but keep it subtle.
 
+IMPORTANT WRITING RULES:
+- Do NOT use "Dear Sir / Madam"
+- Start with a natural greeting ("Hi," or similar)
+- Vary the first sentence across emails
+- If a website is available, reference it naturally
+- Avoid repeating the exact same phrasing across leads
+
 Demo link:
 - Mention naturally: https://teatimelounge.com/assistant
 - Present it as something they can try if curious
