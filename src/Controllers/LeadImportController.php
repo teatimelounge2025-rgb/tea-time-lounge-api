@@ -547,12 +547,12 @@ Core rules:
 - Focus on usefulness, not selling
 
 Structure:
-1. Greeting
+1. Greeting (Dear Sir / Madam,
 2. Reason for reaching out
 3. Simple use case
 4. Demo mention (optional)
 5. Soft CTA
-6. closing (Best regards, Sander Huisman http://wwww.jibodev.eu)
+6. closing (Best regards, Sander Huisman H: http://wwww.jibodev.eu T: +31 (0)6 52693240)
 
 Demo link:
 - Mention naturally: https://teatimelounge.com/assistant
