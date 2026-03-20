@@ -663,7 +663,7 @@ Lead context:
 - Industry: {$industry}
 - Location: {$cityCountry}
 - Website: {$website}
-- Name: {$name}
+- Name: {$manager_name}
 - Notes: {$notes}
 
 Your task is to write short, natural outreach emails.
