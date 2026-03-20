@@ -5,42 +5,25 @@ declare(strict_types=1);
 namespace TeaTimeLounge\ApiGateway\Controllers;
 
 use TeaTimeLounge\ApiGateway\Http\Request;
+use TeaTimeLounge\ApiGateway\lib\OpenAiClient;
 
 class LeadImportController
 {
     public function __invoke(Request $request): array
     {
-     $receivedToken = '';
+        $receivedToken = $this->getHeaderValue('x-lead-import-token');
+        $expectedToken = trim((string) getenv('LEAD_IMPORT_TOKEN'));
 
-if (function_exists('getallheaders')) {
-    $headers = getallheaders();
-
-    foreach ($headers as $key => $value) {
-        if (strtolower((string)$key) === 'x-lead-import-token') {
-            $receivedToken = trim((string)$value);
-            break;
-        }
-    }
-}
-
-if ($receivedToken === '' && isset($_SERVER['HTTP_X_LEAD_IMPORT_TOKEN'])) {
-    $receivedToken = trim((string)$_SERVER['HTTP_X_LEAD_IMPORT_TOKEN']);
-}
-
-$expectedToken = trim((string)getenv('LEAD_IMPORT_TOKEN'));
-
-$isAuthorized =
-    $receivedToken !== '' &&
-    $expectedToken !== '' &&
-    hash_equals($expectedToken, $receivedToken);
+        $isAuthorized =
+            $receivedToken !== '' &&
+            $expectedToken !== '' &&
+            hash_equals($expectedToken, $receivedToken);
 
         if (!$isAuthorized) {
             return $this->response(401, [
                 'success' => false,
                 'error' => 'Unauthorized',
                 'debug' => [
-                    'received_token' => $receivedToken,
-                    'expected_token' => $expectedToken,
                     'received_token_length' => strlen($receivedToken),
                     'expected_token_length' => strlen($expectedToken),
                     'env_token_loaded' => $expectedToken !== '',
@@ -50,8 +33,7 @@ $isAuthorized =
             ]);
         }
 
-        $rawBody = file_get_contents('php://input');
-        $body = json_decode($rawBody ?: '', true);
+        $body = $this->getJsonBody();
 
         if (!is_array($body)) {
             return $this->response(400, [
@@ -110,13 +92,8 @@ $isAuthorized =
             ]);
         }
 
-        $baseHeaders = [
-            'apikey: ' . $serviceRoleKey,
-            'Authorization: Bearer ' . $serviceRoleKey,
-            'Content-Type: application/json',
-        ];
+        $baseHeaders = $this->getSupabaseHeaders($serviceRoleKey);
 
-        // Duplicate check by external_key
         $checkUrl = $supabaseUrl
             . '/rest/v1/leads?external_key=eq.'
             . rawurlencode($externalKey)
@@ -150,7 +127,6 @@ $isAuthorized =
             ]);
         }
 
-        // Insert new lead
         $payload = [
             'source' => $source,
             'source_sheet' => $sourceSheet,
@@ -172,6 +148,7 @@ $isAuthorized =
             'notes_about_industry' => $notesAboutIndustry,
 
             'status' => 'new',
+            'generation_status' => 'idle',
             'updated_at' => gmdate('c'),
         ];
 
@@ -210,12 +187,185 @@ $isAuthorized =
         ]);
     }
 
+   public function generateEmail(Request $request): array
+{
+    $body = $this->getJsonBody();
+    $leadId = $this->detectLeadId($body);
+
+    if ($leadId === null) {
+        return $this->response(400, [
+            'success' => false,
+            'error' => 'Lead id is required',
+        ]);
+    }
+
+    $supabaseUrl = rtrim((string) getenv('SUPABASE_URL'), '/');
+    $serviceRoleKey = trim((string) getenv('SUPABASE_SERVICE_ROLE_KEY'));
+
+    if ($supabaseUrl === '' || $serviceRoleKey === '') {
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'Supabase environment variables missing',
+        ]);
+    }
+
+    $supabaseHeaders = $this->getSupabaseHeaders($serviceRoleKey);
+
+    $leadResult = $this->fetchLeadById($supabaseUrl, $supabaseHeaders, $leadId);
+
+    if (($leadResult['success'] ?? false) === false) {
+        return $this->response((int) ($leadResult['status'] ?? 500), [
+            'success' => false,
+            'error' => $leadResult['error'] ?? 'Lead fetch failed',
+            'details' => $leadResult['details'] ?? null,
+        ]);
+    }
+
+    $lead = $leadResult['lead'];
+
+    $markGenerating = $this->updateLead($supabaseUrl, $supabaseHeaders, $leadId, [
+        'generation_status' => 'generating',
+        'updated_at' => gmdate('c'),
+    ]);
+
+    if (($markGenerating['success'] ?? false) === false) {
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'Could not mark lead as generating',
+            'details' => $markGenerating['details'] ?? null,
+        ]);
+    }
+
+    $prompt = $this->buildLeadEmailPrompt($lead);
+
+    try {
+        $openAiClient = new OpenAiClient();
+        $draft = $openAiClient->generateLeadDraft($prompt);
+    } catch (\Throwable $e) {
+        $this->updateLead($supabaseUrl, $supabaseHeaders, $leadId, [
+            'generation_status' => 'failed',
+            'updated_at' => gmdate('c'),
+        ]);
+
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'OpenAI generation failed',
+            'details' => $e->getMessage(),
+        ]);
+    }
+
+    $finalPayload = [
+        'draft_subject' => trim((string) $draft['subject']),
+        'draft_body' => trim((string) $draft['body']),
+        'draft_language' => $this->nullableString($draft['language'] ?? null) ?? 'en',
+        'generation_status' => 'generated',
+        'generated_at' => gmdate('c'),
+        'prompt_version' => 'lead_outreach_v1',
+        'personalization_notes' => is_array($draft['personalization_notes'] ?? null)
+            ? array_values(array_filter(
+                array_map(
+                    fn($item) => is_scalar($item) ? trim((string) $item) : '',
+                    $draft['personalization_notes']
+                ),
+                fn(string $item) => $item !== ''
+            ))
+            : [],
+        'updated_at' => gmdate('c'),
+    ];
+
+    $saveDraft = $this->updateLead(
+        $supabaseUrl,
+        $supabaseHeaders,
+        $leadId,
+        $finalPayload,
+        true
+    );
+
+    if (($saveDraft['success'] ?? false) === false) {
+        $this->updateLead($supabaseUrl, $supabaseHeaders, $leadId, [
+            'generation_status' => 'failed',
+            'updated_at' => gmdate('c'),
+        ]);
+
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'Could not save generated draft',
+            'details' => $saveDraft['details'] ?? null,
+        ]);
+    }
+
+    return $this->response(200, [
+        'success' => true,
+        'status' => 'generated',
+        'lead_id' => $leadId,
+        'draft' => $saveDraft['row'] ?? $finalPayload,
+    ]);
+}
+
     private function response(int $status, array $body): array
     {
         return [
             'status' => $status,
             'body' => $body,
         ];
+    }
+
+    private function getJsonBody(): ?array
+    {
+        $rawBody = file_get_contents('php://input');
+        $body = json_decode($rawBody ?: '', true);
+
+        return is_array($body) ? $body : null;
+    }
+
+    private function getHeaderValue(string $name): string
+    {
+        $target = strtolower($name);
+
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+
+            foreach ($headers as $key => $value) {
+                if (strtolower((string) $key) === $target) {
+                    return trim((string) $value);
+                }
+            }
+        }
+
+        $serverKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+
+        if (isset($_SERVER[$serverKey])) {
+            return trim((string) $_SERVER[$serverKey]);
+        }
+
+        return '';
+    }
+
+    private function detectLeadId(?array $body): ?string
+    {
+        $candidate = $this->nullableString($body['lead_id'] ?? null);
+
+        if ($candidate !== null) {
+            return $candidate;
+        }
+
+        $candidate = $this->nullableString($_GET['id'] ?? null);
+
+        if ($candidate !== null) {
+            return $candidate;
+        }
+
+        $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+        if ($uri !== '') {
+            if (preg_match('#/api/leads/([^/]+)/generate-email#', $uri, $matches) === 1) {
+                $candidate = $this->nullableString(urldecode((string) $matches[1]));
+                if ($candidate !== null) {
+                    return $candidate;
+                }
+            }
+        }
+
+        return null;
     }
 
     private function nullableString(mixed $value): ?string
@@ -251,6 +401,167 @@ $isAuthorized =
 
         return $normalized === '' ? null : $normalized;
     }
+
+    private function getSupabaseHeaders(string $serviceRoleKey): array
+    {
+        return [
+            'apikey: ' . $serviceRoleKey,
+            'Authorization: Bearer ' . $serviceRoleKey,
+            'Content-Type: application/json',
+        ];
+    }
+
+    private function fetchLeadById(string $supabaseUrl, array $headers, string $leadId): array
+    {
+        $url = $supabaseUrl
+            . '/rest/v1/leads?id=eq.'
+            . rawurlencode($leadId)
+            . '&select=*'
+            . '&limit=1';
+
+        $result = $this->curlJsonRequest('GET', $url, $headers);
+
+        if ($result['ok'] === false) {
+            return [
+                'success' => false,
+                'status' => 500,
+                'error' => 'Supabase fetch failed',
+                'details' => $result['error'],
+            ];
+        }
+
+        if ($result['http_code'] >= 400) {
+            return [
+                'success' => false,
+                'status' => 500,
+                'error' => 'Supabase fetch error',
+                'details' => $result['body'],
+            ];
+        }
+
+        $rows = json_decode((string) $result['body'], true);
+
+        if (!is_array($rows) || count($rows) === 0 || !is_array($rows[0])) {
+            return [
+                'success' => false,
+                'status' => 404,
+                'error' => 'Lead not found',
+                'details' => null,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'lead' => $rows[0],
+        ];
+    }
+
+    private function updateLead(
+        string $supabaseUrl,
+        array $headers,
+        string $leadId,
+        array $payload,
+        bool $returnRepresentation = false
+    ): array {
+        $requestHeaders = $headers;
+
+        if ($returnRepresentation) {
+            $requestHeaders[] = 'Prefer: return=representation';
+        }
+
+        $url = $supabaseUrl
+            . '/rest/v1/leads?id=eq.'
+            . rawurlencode($leadId);
+
+        $result = $this->curlJsonRequest('PATCH', $url, $requestHeaders, $payload);
+
+        if ($result['ok'] === false) {
+            return [
+                'success' => false,
+                'details' => $result['error'],
+            ];
+        }
+
+        if ($result['http_code'] >= 400) {
+            return [
+                'success' => false,
+                'details' => $result['body'],
+            ];
+        }
+
+        $row = null;
+
+        if ($returnRepresentation) {
+            $decoded = json_decode((string) $result['body'], true);
+            if (is_array($decoded) && isset($decoded[0]) && is_array($decoded[0])) {
+                $row = $decoded[0];
+            }
+        }
+
+        return [
+            'success' => true,
+            'row' => $row,
+        ];
+    }
+
+    private function buildLeadEmailPrompt(array $lead): string
+    {
+        $company = $this->nullableString($lead['company'] ?? $lead['company_name'] ?? null) ?? '';
+        $website = $this->nullableString($lead['website'] ?? $lead['website_address'] ?? null) ?? '';
+        $domain = $this->nullableString($lead['domain'] ?? null) ?? '';
+        $industry = $this->nullableString($lead['industry'] ?? $lead['type_of_business'] ?? null) ?? '';
+        $managerName = $this->nullableString($lead['manager_name'] ?? $lead['contact_name'] ?? null) ?? '';
+        $cityCountry = $this->nullableString($lead['city_country'] ?? null)
+            ?? $this->combineLocation(
+                $this->nullableString($lead['city'] ?? null),
+                $this->nullableString($lead['country'] ?? null)
+            )
+            ?? '';
+        $notes = $this->nullableString($lead['notes_about_industry'] ?? $lead['notes'] ?? $lead['reason'] ?? null) ?? '';
+
+        return <<<PROMPT
+You are a lead follow-up email assistant for Tea Time Lounge / Minute Bar style outreach.
+
+Write a warm, professional, concise, human-sounding first outreach email for a business lead.
+
+Lead data:
+- Company name: {$company}
+- Website: {$website}
+- Domain: {$domain}
+- Industry / business type: {$industry}
+- Contact / manager name: {$managerName}
+- Location: {$cityCountry}
+- Notes: {$notes}
+
+Instructions:
+- Personalize the email to the lead where reasonably possible.
+- Keep the email commercially smart, friendly, and natural.
+- Do not sound robotic or overly salesy.
+- Do not invent facts that are not reasonably supported by the lead data.
+- Keep the email body under 180 words.
+- Return only valid JSON.
+- Use this exact JSON structure:
+
+{
+  "subject": "string",
+  "body": "string",
+  "language": "string",
+  "personalization_notes": ["string"]
+}
+PROMPT;
+    }
+
+    private function combineLocation(?string $city, ?string $country): ?string
+    {
+        $parts = array_values(array_filter([$city, $country], fn($value) => $value !== null && $value !== ''));
+
+        if (count($parts) === 0) {
+            return null;
+        }
+
+        return implode(', ', $parts);
+    }
+
 
     private function curlJsonRequest(
         string $method,
