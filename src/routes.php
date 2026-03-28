@@ -38,3 +38,8 @@ $router->post('/api/leads/generate-follow-up', function () {
     return (new LeadImportController())->generateFollowUp(new Request());
 });
 
+$router->post('/api/leads/{id}/mark-contacted', function (array $params = []) {
+    $_GET['id'] = $params['id'] ?? null;
+    return (new LeadImportController())->markContacted(new Request());
+});
+

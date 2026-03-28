@@ -456,6 +456,77 @@ class LeadImportController
         ];
     }
 
+    public function markContacted(Request $request): array
+{
+    $body = $this->getJsonBody();
+    $leadId = $this->detectLeadId($body);
+
+    if ($leadId === null) {
+        return $this->response(400, [
+            'success' => false,
+            'error' => 'Lead id is required',
+        ]);
+    }
+
+    $supabaseUrl = rtrim((string) getenv('SUPABASE_URL'), '/');
+    $serviceRoleKey = trim((string) getenv('SUPABASE_SERVICE_ROLE_KEY'));
+
+    if ($supabaseUrl === '' || $serviceRoleKey === '') {
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'Supabase environment variables missing',
+        ]);
+    }
+
+    $supabaseHeaders = $this->getSupabaseHeaders($serviceRoleKey);
+
+    $leadResult = $this->fetchLeadById($supabaseUrl, $supabaseHeaders, $leadId);
+
+    if (($leadResult['success'] ?? false) === false) {
+        return $this->response((int) ($leadResult['status'] ?? 500), [
+            'success' => false,
+            'error' => $leadResult['error'] ?? 'Lead fetch failed',
+            'details' => $leadResult['details'] ?? null,
+        ]);
+    }
+
+    $lead = $leadResult['lead'];
+    $now = gmdate('c');
+
+    $payload = [
+        'status' => 'contacted',
+        'last_contacted' => $now,
+        'updated_at' => $now,
+    ];
+
+    if (empty($lead['first_contacted_at'])) {
+        $payload['first_contacted_at'] = $now;
+    }
+
+    $updated = $this->updateLead(
+        $supabaseUrl,
+        $supabaseHeaders,
+        $leadId,
+        $payload,
+        true
+    );
+
+    if (($updated['success'] ?? false) === false) {
+        return $this->response(500, [
+            'success' => false,
+            'error' => 'Could not mark lead as contacted',
+            'details' => $updated['details'] ?? null,
+        ]);
+    }
+
+    return $this->response(200, [
+        'success' => true,
+        'status' => 'contacted',
+        'lead_id' => $leadId,
+        'lead' => $updated['row'] ?? null,
+    ]);
+}
+
     public function generateFollowUp(Request $request): array
 {
     $body = $this->getJsonBody();
@@ -632,13 +703,20 @@ class LeadImportController
 
     private function buildLeadEmailPrompt(array $lead): string
 {
-    return 'You are a lead outreach email assistant for a multilingual AI assistant developed by Jibo Dev.
+    $company = $this->nullableString($lead['company'] ?? null) ?? '';
+    $industry = $this->nullableString($lead['industry'] ?? null) ?? '';
+    $cityCountry = $this->nullableString($lead['city_country'] ?? null) ?? '';
+    $website = $this->nullableString($lead['website'] ?? null) ?? '';
+    $managerName = $this->nullableString($lead['manager_name'] ?? null) ?? '';
+    $notes = $this->nullableString($lead['notes_about_industry'] ?? null) ?? '';
+
+    return "You are a lead outreach email assistant for a multilingual AI assistant developed by Jibo Dev.
 
 Your task is to write short, natural, human-sounding outreach emails.
 
 What the product does (keep this subtle and simple):
 - Helps handle incoming customer questions automatically
-- Can reply in the customers language
+- Can reply in the customer's language
 - Reduces time spent on repetitive messages
 - Keeps responses clear and consistent
 
@@ -646,6 +724,7 @@ IMPORTANT:
 - Mention at most 1–2 of these naturally in the email
 - Do NOT list features
 - Do NOT sound technical
+
 Goal:
 Introduce a multilingual AI assistant that helps businesses respond to customer inquiries automatically, reply in customer language, and encourage either a quick reply or a visit to a live demo. Generate interest and encourage a reply or demo.
 
@@ -656,6 +735,7 @@ The product is a website-based AI assistant that:
 - works 24/7
 - can respond in the visitor’s own language automatically
 - reduces drop-off and improves engagement
+
 This is NOT an email automation tool. Do NOT position it as handling inboxes or emails.
 
 Lead context:
@@ -683,34 +763,34 @@ Core rules:
 - Focus on usefulness, not selling
 
 Structure:
-1. Greeting (Dear Sir / Madam,
-2. Short introduction (who you are)
+1. Greeting
+2. Short introduction
 3. Reason for reaching out
 4. What the assistant does (on their website)
 5. Key benefit (multilingual + instant help)
 6. Demo mention (optional)
 7. Call to action (demo or reply)
 8. Mention more information can be found at https://www.jibodev.eu
-9. closing (Best regards, Sander Huisman H: https://www.jibodev.eu T: +31 (0)6 52693240)
+9. Closing (Best regards, Sander Huisman H: https://www.jibodev.eu T: +31 (0)6 52693240)
 
 PERSONALIZATION:
 Use the lead data when relevant:
-- Company name: ' . ($lead['company_name'] ?? '') . '
-- Website: ' . ($lead['website'] ?? '') . '
-- Business type: ' . ($lead['type'] ?? '') . '
+- Company name: {$company}
+- Website: {$website}
+- Business type: {$industry}
 
 Adapt tone slightly depending on the type of business (e.g. hospitality, e-commerce, services), but keep it subtle.
 
 IMPORTANT GREETING RULES:
-- If a contact name is provided, start with: "Hi [Name],"
-- If no name is available, use a neutral greeting like: "Hi," or "Hello,"
+- If a contact name is provided, start with: \"Hi [Name],\"
+- If no name is available, use a neutral greeting like: \"Hi,\" or \"Hello,\"
 - Avoid overly formal greetings unless clearly appropriate
-- Do NOT use "Dear Sir / Madam" by default
+- Do NOT use \"Dear Sir / Madam\" by default
 - Keep the tone polite, but natural and human
 
 IMPORTANT WRITING RULES:
-- Do NOT use "Dear Sir / Madam"
-- Start with a natural greeting ("Hi," or similar)
+- Do NOT use \"Dear Sir / Madam\"
+- Start with a natural greeting (\"Hi,\" or similar)
 - Vary the first sentence across emails
 - If a website is available, reference it naturally
 - Avoid repeating the exact same phrasing across leads
@@ -721,7 +801,7 @@ Demo link:
 - Do NOT push or oversell it
 
 Call to action:
-- Keep it soft (e.g. "happy to show you", "curious if this is relevant", "open to a quick intro")
+- Keep it soft (e.g. \"happy to show you\", \"curious if this is relevant\", \"open to a quick intro\")
 
 Tone:
 - Human
@@ -734,13 +814,12 @@ Subject line:
 - Simple and natural
 - Can lightly reflect industry or use case
 
-
 Output format (strict JSON):
 {
-  "subject": "string",
-  "body": "string",
-  "language": "string"
-}';
+  \"subject\": \"string\",
+  \"body\": \"string\",
+  \"language\": \"string\"
+}";
 }
 
 
