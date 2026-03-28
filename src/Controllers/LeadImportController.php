@@ -499,8 +499,20 @@ class LeadImportController
         'updated_at' => $now,
     ];
 
-    if (empty($lead['first_contacted_at'])) {
-        $payload['first_contacted_at'] = $now;
+    // 👇 follow-up logic
+    if (($lead['status'] ?? '') === 'contacted') {
+
+        $currentStage = $lead['follow_up_stage'] ?? null;
+
+        if ($currentStage === null) {
+            $payload['follow_up_stage'] = 'follow_1_sent';
+        } elseif ($currentStage === 'follow_1_sent') {
+            $payload['follow_up_stage'] = 'follow_2_sent';
+        } elseif ($currentStage === 'follow_2_sent') {
+            $payload['follow_up_stage'] = 'follow_3_sent';
+        }
+
+        $payload['follow_up_sent_at'] = $now;
     }
 
     $updated = $this->updateLead(
