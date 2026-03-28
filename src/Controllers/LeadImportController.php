@@ -493,15 +493,19 @@ class LeadImportController
     $lead = $leadResult['lead'];
     $now = gmdate('c');
 
+    $currentStatus = $lead['status'] ?? null;
+
     $payload = [
         'status' => 'contacted',
         'last_contacted' => $now,
         'updated_at' => $now,
     ];
 
-    // 👇 follow-up logic
-    if (($lead['status'] ?? '') === 'contacted') {
+    if ($currentStatus !== 'contacted') {
+        $payload['first_contacted_at'] = $now;
+    }
 
+    if ($currentStatus === 'contacted') {
         $currentStage = $lead['follow_up_stage'] ?? null;
 
         if ($currentStage === null) {
