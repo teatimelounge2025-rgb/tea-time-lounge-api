@@ -259,6 +259,7 @@ class LeadImportController
         'draft_body' => trim((string) $draft['body']),
         'draft_language' => $this->nullableString($draft['language'] ?? null) ?? 'en',
         'generation_status' => 'generated',
+        'generated_at' => gmdate('c'),
         'prompt_version' => 'lead_outreach_v1',
         'personalization_notes' => is_array($draft['personalization_notes'] ?? null)
             ? array_values(array_filter(
@@ -618,22 +619,24 @@ class LeadImportController
     };
 
     $finalPayload = [
-    'draft_subject' => trim((string) ($draft['subject'] ?? '')),
-    'draft_body' => trim((string) ($draft['body'] ?? '')),
-    'draft_language' => $this->nullableString($draft['language'] ?? null) ?? 'en',
-    'generation_status' => 'generated',
-    'prompt_version' => 'follow_up_v1',
-    'personalization_notes' => is_array($draft['personalization_notes'] ?? null)
-        ? array_values(array_filter(
-            array_map(
-                fn($item) => is_scalar($item) ? trim((string) $item) : '',
-                $draft['personalization_notes']
-            ),
-            fn(string $item) => $item !== ''
-        ))
-        : [],
-    'updated_at' => gmdate('c'),
-];
+        'draft_subject' => trim((string) ($draft['subject'] ?? '')),
+        'draft_body' => trim((string) ($draft['body'] ?? '')),
+        'draft_language' => $this->nullableString($draft['language'] ?? null) ?? 'en',
+        'generation_status' => 'generated',
+        'prompt_version' => 'follow_up_v1',
+        'follow_up_stage' => $stageToSave,
+        'follow_up_sent_at' => gmdate('c'),
+        'personalization_notes' => is_array($draft['personalization_notes'] ?? null)
+            ? array_values(array_filter(
+                array_map(
+                    fn($item) => is_scalar($item) ? trim((string) $item) : '',
+                    $draft['personalization_notes']
+                ),
+                fn(string $item) => $item !== ''
+            ))
+            : [],
+        'updated_at' => gmdate('c'),
+    ];
 
     $saveDraft = $this->updateLead(
         $supabaseUrl,
